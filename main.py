@@ -26,12 +26,14 @@ from llava.utils import disable_torch_init
 from llava.mm_utils import tokenizer_image_token, process_images, get_model_name_from_path
 from llava.conversation import conv_templates
 
+# OpenAIキーの入力箇所 これをazure APIキーに変えることで動作するのか不明
 client = OpenAI(api_key="[your-openai-api-key]")
 
 OBS_LEN = 10
 FUT_LEN = 10
 TTL_LEN = OBS_LEN + FUT_LEN
 
+# テキストの処理をllamaにするかqwenにするかで内容が変更
 def getMessage(prompt, image=None, args=None):
     if "llama" in args.model_path:
         message = [
@@ -49,7 +51,7 @@ def getMessage(prompt, image=None, args=None):
         ]   
     return message
 
-
+# vison language modelの選択（候補 llama, qwen, llava, gpto）
 def vlm_inference(text=None, images=None, sys_message=None, processor=None, model=None, tokenizer=None, args=None):
         if  "llama" in args.model_path:
             image = Image.open(images).convert('RGB')
@@ -159,6 +161,7 @@ def vlm_inference(text=None, images=None, sys_message=None, processor=None, mode
 
             return result.choices[0].message.content
 
+# シーンの説明のプロンプト入力と推論を実行
 def SceneDescription(obs_images, processor=None, model=None, tokenizer=None, args=None):
     prompt = f"""You are a autonomous driving labeller. You have access to these front-view camera images of a car taken at a 0.5 second interval over the past 5 seconds. Imagine you are driving the car. Describe the driving scene according to traffic lights, movements of other cars or pedestrians and lane markings."""
 
@@ -168,6 +171,7 @@ def SceneDescription(obs_images, processor=None, model=None, tokenizer=None, arg
     result = vlm_inference(text=prompt, images=obs_images, processor=processor, model=model, tokenizer=tokenizer, args=args)
     return result
 
+# 映像内の物体検出のプロンプト入力と推論を実行
 def DescribeObjects(obs_images, processor=None, model=None, tokenizer=None, args=None):
 
     prompt = f"""You are a autonomous driving labeller. You have access to a front-view camera images of a vehicle taken at a 0.5 second interval over the past 5 seconds. Imagine you are driving the car. What other road users should you pay attention to in the driving scene? List two or three of them, specifying its location within the image of the driving scene and provide a short description of the that road user on what it is doing, and why it is important to you."""
@@ -176,6 +180,7 @@ def DescribeObjects(obs_images, processor=None, model=None, tokenizer=None, args
 
     return result
 
+# 将来の動き、推奨動作のプロンプト入力と推論を実行
 def DescribeOrUpdateIntent(obs_images, prev_intent=None, processor=None, model=None, tokenizer=None, args=None):
 
     if prev_intent is None:
@@ -238,6 +243,7 @@ def GenerateMotion(obs_images, obs_waypoints, obs_velocities, obs_curvatures, gi
             break
     return result, scene_description, object_description, intent_description
 
+# デフォルトのモデルパスはgptを使用
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-path", type=str, default="gpt")
